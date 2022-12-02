@@ -101,20 +101,21 @@ module.exports = class GunService {
         SEA
             .secret(toUserEPub, this.authPair)
             .then(privateKey => SEA.encrypt(message, privateKey))
-            .then(secretMessage => this.sendImmutableMessage(space, secretMessage, userPub));
+            .then(secretMessage => this.sendImmutableMessage(space, this.authPair.epub + "#" + secretMessage, userPub));
+    }
+
+    async hash(message) {
+        return SEA.work(this.toString(message), null, null, {name: "SHA-256"});
+    }
+
+    toString(message) {
+        return typeof message !== "string" ? JSON.stringify(message) : message;
     }
 
     sendImmutableMessage(space, message, userPub) {
-        return new Promise((resolve, reject) => {
-            this.user.get(space).set(message).on(async (data, key) => {
-                try {
-                    const hash = await SEA.work(key, null, null, {name: 'SHA-256'});
-                    this.gunDB.get("#" + space).get(userPub + "#" + hash).put(key, res => res.err ? reject(res.err) : resolve(res));
-                } catch (e) {
-                    reject(e);
-                }
-            })
-        });
+        this.auth()
+            .then(_ => this.hash(message))
+            .then(hash => new Promise((resolve, reject) => this.gunDB.get(space + "@" + userPub + "#").get(hash).put(this.toString(message), res => res.err ? reject(res.err) : resolve(res))));
     }
 
     async grantWritePart(userPub, spaceName) {
@@ -135,11 +136,30 @@ module.exports = class GunService {
 
     $receivePrivateMessages(space) {
         const subject = new Subject();
-        this.gunDB
-            .get("#" + space)
-            .get({ "." : { "*": this.authPair.pub } })
-            .map()
-            .once(data => this.gunDB.user(this.authPair.pub).get(space).get(data).once(msg => subject.next(msg)));
+        setTimeout(() =>
+            this.gunDB
+                .get(space + "@" + this.authPair.pub + "#")
+                .map()
+                .once(msg => subject.next(msg))
+        );
+        return subject;
+    }
+
+    $receiveDecryptedPrivateMessages(space) {
+        const subject = new Subject();
+        setTimeout(() =>
+            this.gunDB
+                .get(space + "@" + this.authPair.pub + "#")
+                .map()
+                .once(async msg => {
+                    const char = "#";
+                    const arr = msg.split(char);
+                    if (arr.length === 2) {
+                        const [authorEPUB, encMsg] = arr;
+                        return subject.next(await SEA.decrypt(encMsg, await SEA.secret(authorEPUB, this.authPair)))
+                    }
+                })
+        );
         return subject;
     }
 
