@@ -1,0 +1,27 @@
+{
+  "name": "gun-service",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "postpublish": "PACKAGE_VERSION=$(cat package.json | grep \\\"version\\\" | head -1 | awk -F: '{ print $2 }' | sed 's/[\",]//g' | tr -d '[[:space:]]') && git add . && git commit -m'tag version' && git tag v$PACKAGE_VERSION && git push --tags"
+  },
+  "dependencies": {
+    "gun": "^0.2020.1238",
+    "rxjs": "^7.5.7"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Anas2001/gunDB.git"
+  },
+  "keywords": [
+    "gundb",
+    "graphDB"
+  ],
+  "author": "Anas Saber",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Anas2001/gunDB/issues"
+  },
+  "homepage": "https://github.com/Anas2001/gunDB#readme"
+}
