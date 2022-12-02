@@ -123,14 +123,13 @@ module.exports = class GunService {
             .then(cert => this.sendImmutableMessage(this.shardSpace, {cert, type: MessageType.OPEN_SPACE_CERT}, userPub));
     }
 
-    async $path(path, userPub) {
+    $path(path, userPub) {
         const subject = new Subject();
         let node = path
             .split(".")
             .reduce((acc, key) => acc.get(key), this.gunDB);
         node = userPub ? node.get(userPub) : node;
         node.map().once(subject.next);
-
         return subject;
     }
 
